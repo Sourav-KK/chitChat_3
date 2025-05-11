@@ -1,5 +1,5 @@
 import { createServer } from "http";
-import { ServerOptions } from "socket.io";
+import { ServerOptions, Server } from "socket.io";
 import { corsConfig } from "../middleware/express";
 
 export const createSocketServer = (server: ReturnType<typeof createServer>) => {
