@@ -1,43 +1,24 @@
 // import { connectToMongoAtlas } from "./infrastructure/DB/mongo.config";
-import { Server_Config } from "configs/server/Server.Config";
-import express from "express";
-import { createServer } from "http";
+import { Application, NextFunction, Response } from "express-serve-static-core";
 import { serverMiddlewareConfig } from "./middleware/express";
-import { Application } from "express-serve-static-core";
-
-const app = express();
-const { PORT_NO } = Server_Config();
-
-// const Server = async () => {
-//   try {
-//     serverMiddlewareConfig(app);
-
-//     app.listen(PORT_NO, () => {
-//       console.info(`Server running on PORT: ${PORT_NO}`);
-//     });
-
-//     //     await connectToMongoAtlas().then();
-
-//     // app.use("/api/v1/auth/user");
-//     // app.use("/api/v1/user");
-//   } catch (error: any) {
-//     console.error("Error in starting server:", error);
-//   }
-// };
-
-// export { Server };
+import { Server_Config } from "configs/server/Server.Config";
+import express, { Request } from "express";
+import { createServer } from "http";
 
 export class Server {
   private app: Application;
   private config: ReturnType<typeof Server_Config>;
   private server: ReturnType<typeof createServer>;
   //   private io: ReturnType<typeof createSocketServer>;
+  private readonly maxRetries: number;
 
   constructor() {
-    this.app = app;
+    this.app = express();
     this.initialize();
-    this.config = Server_Config();
     this.server = createServer(this.app);
+    this.config = Server_Config();
+    this.setupErrorHandlers();
+    this.maxRetries = 10;
   }
 
   private initialize(): void {
@@ -55,11 +36,33 @@ export class Server {
     this.app.use("/api/v1/user");
   }
 
-  public start(): void {
-    const PORT_NO = this.config.PORT_NO;
-
-    this.server.listen(PORT_NO, () => {
-      console.log(`Server running on port ${PORT_NO}`);
+  private setupErrorHandlers(): void {
+    // Catch 404
+    this.app.use((_req: Request, res: Response) => {
+      res.status(404).json({ error: "Route not found" });
     });
+
+    // General error handler
+    this.app.use(
+      (err: Error, _req: Request, res: Response, _next: NextFunction) => {
+        console.error("Unhandled error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    );
+  }
+
+  public start(): void {
+    let currentTry = 0;
+
+    try {
+      const { PORT_NO } = this.config;
+
+      this.server.listen(PORT_NO, () => {
+        console.log(`✅ Server running on port ${PORT_NO}`);
+      });
+    } catch (error) {
+      console.error("❌ Failed to start server:", error);
+      process.exit(1); // Exit with failure
+    }
   }
 }
