@@ -24,11 +24,21 @@ export class Server {
   private initialize(): void {
     this.setupMiddleware();
     this.setupRoutes();
-    //     this.setupSocket()
+    this.setupSocketHandlers();
   }
 
   private setupMiddleware(): void {
     serverMiddlewareConfig(this.app);
+  }
+
+  private setupSocketHandlers(): void {
+    this.io.on("connection", (socket) => {
+      console.log("Client connected:", socket.id);
+
+      socket.on("disconnect", () => {
+        console.log("Client disconnected:", socket.id);
+      });
+    });
   }
 
   private setupRoutes(): void {
